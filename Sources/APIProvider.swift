@@ -150,6 +150,24 @@ extension DataRequest {
         }
     }
     
+    /// Find dates with miliseconds and remove them
+    ///
+    /// Dates like "2018-07-16T09:31:04.677Z" are replaced by "2018-07-16T09:31:04Z"
+    /// This is a hack, we should really find full dates first then remove milliseconds.
+    public static func removeMillisecondsInISO8601Date(data: Data) -> Data {
+        let str = String(data: data, encoding: .utf8)
+        
+        if let str = str, let regex = try? NSRegularExpression(pattern: "\\.[0-9]{1,3}Z") {
+            let modString = regex.stringByReplacingMatches(in: str, options: [], range: NSRange(location: 0, length:  str.count), withTemplate: "Z")
+            if let modData = modString.data(using: .utf8) {
+                //print(modString)
+                return modData
+            }
+        }
+        return data
+    }
+
+    
     /// Maps the response to the given JSONDecodable data type.
     ///
     /// - Parameters:
@@ -163,7 +181,7 @@ extension DataRequest {
                 guard let data = data else {
                     throw JSONMappingError.invalidResponse
                 }
-                let codable = try decoder.decode(T.self, from: data)
+                let codable = try decoder.decode(T.self, from: DataRequest.removeMillisecondsInISO8601Date(data: data))
                 return codable
             })
             completion(result)
